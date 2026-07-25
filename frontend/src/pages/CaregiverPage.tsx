@@ -18,6 +18,16 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useRecovery } from '../context/RecoveryContext';
 
+/**
+ * CaregiverPage Component
+ * 
+ * Provides evidence-based Generative AI support, de-escalation protocols, 
+ * verbal boundaries, and warning sign guides for caregivers supporting loved ones 
+ * through substance use disorder recovery.
+ * 
+ * @component
+ * @returns {React.ReactElement} The rendered Caregiver Assistant view.
+ */
 export const CaregiverPage: React.FC = () => {
   const { showToast } = useRecovery();
   const [question, setQuestion] = useState('');
@@ -52,7 +62,7 @@ export const CaregiverPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <div className="space-y-8 py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto" role="region" aria-label="Caregiver Assistant Hub">
       {/* Header */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">

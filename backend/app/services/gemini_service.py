@@ -130,8 +130,21 @@ class GeminiService:
         self,
         user_input: str,
         history: Optional[list] = None,
-        context: Optional[dict] = None
+        context: Optional[dict] = None,
+        custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """
+        Generates empathetic Voice Coach intervention from user transcript.
+
+        Args:
+            user_input: Speech transcript string.
+            history: Previous turn history list.
+            context: User state metrics dict.
+            custom_api_key: Optional client-provided Gemini API Key.
+
+        Returns:
+            Dict matching CoachResponse schema.
+        """
         prompt = COACH_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             user_input=user_input,
@@ -148,13 +161,14 @@ class GeminiService:
             "healthy_distraction": "Put on your favorite calming audio playlist or step outside for a 3-minute brisk walk."
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_emergency_response(
         self,
         trigger_reason: str,
         user_name: str = "Friend",
-        trusted_contact: str = "Trusted Support"
+        trusted_contact: str = "Trusted Support",
+        custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         prompt = EMERGENCY_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
@@ -182,12 +196,17 @@ class GeminiService:
             ]
         }
 
-        res = await self.generate_response(prompt, fallback)
+        res = await self.generate_response(prompt, fallback, custom_api_key)
         if "hotlines" not in res:
             res["hotlines"] = fallback["hotlines"]
         return res
 
-    async def get_caregiver_response(self, question: str, patient_context: str = "") -> Dict[str, Any]:
+    async def get_caregiver_response(
+        self, 
+        question: str, 
+        patient_context: str = "",
+        custom_api_key: Optional[str] = None
+    ) -> Dict[str, Any]:
         prompt = CAREGIVER_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             question=question,
@@ -211,9 +230,13 @@ class GeminiService:
             "self_care_tip": "Remember: You cannot pour from an empty cup. Schedule at least 20 minutes daily for your own rest and emotional regulation."
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
-    async def get_education_response(self, topic: str) -> Dict[str, Any]:
+    async def get_education_response(
+        self, 
+        topic: str,
+        custom_api_key: Optional[str] = None
+    ) -> Dict[str, Any]:
         prompt = EDUCATION_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             topic=topic
@@ -241,7 +264,7 @@ class GeminiService:
             ]
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_checkin_analysis(
         self,
@@ -250,7 +273,8 @@ class GeminiService:
         sleep: int,
         energy: int,
         cravings: int,
-        journal_entry: str = ""
+        journal_entry: str = "",
+        custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         # Determine risk tier baseline
         calculated_risk = "Low"
@@ -285,7 +309,7 @@ class GeminiService:
             "suggested_focus": "Mindful Stress Reduction & Hydration"
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_safety_analysis(
         self,
@@ -293,7 +317,8 @@ class GeminiService:
         stress: int,
         sleep: int,
         isolation_score: int = 5,
-        recent_text: str = ""
+        recent_text: str = "",
+        custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         # Calculate risk
         risk_level = "Low"
@@ -328,9 +353,9 @@ class GeminiService:
             "contact_recommendation": "Reach out to your designated caregiver or call/text 988 for immediate confidential peer support."
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
-    async def get_daily_motivation(self) -> Dict[str, Any]:
+    async def get_daily_motivation(self, custom_api_key: Optional[str] = None) -> Dict[str, Any]:
         prompt = f"{SYSTEM_BASE_PROMPT}\n\nGenerate an inspiring daily recovery motivation quote, author, reflection prompt, and focus area in valid JSON with keys: quote, author, reflection_prompt, daily_focus."
         
         fallback = {
@@ -340,6 +365,6 @@ class GeminiService:
             "daily_focus": "Self-Compassion & Present Moment Awareness"
         }
 
-        return await self.generate_response(prompt, fallback)
+        return await self.generate_response(prompt, fallback, custom_api_key)
 
 gemini_service = GeminiService()

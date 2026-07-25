@@ -19,6 +19,15 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useRecovery } from '../context/RecoveryContext';
 
+/**
+ * DashboardPage Component
+ * 
+ * Central command center displaying live recovery metrics, daily AI motivation,
+ * quick voice AI actions, emergency SOS trigger, and check-in overview.
+ * 
+ * @component
+ * @returns {React.ReactElement} The rendered Dashboard view.
+ */
 export const DashboardPage: React.FC = () => {
   const { checkIns, streakDays, motivation, refreshMotivation } = useRecovery();
   const latestCheckIn = checkIns[0];
@@ -28,7 +37,7 @@ export const DashboardPage: React.FC = () => {
   const stressLevel = latestCheckIn ? latestCheckIn.stress : 3;
 
   return (
-    <div className="space-y-8 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div className="space-y-8 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto" role="region" aria-label="Recovery Overview Dashboard">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

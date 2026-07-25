@@ -248,11 +248,11 @@ class TestCaregiverEndpoint:
 
 MOCK_EDUCATION_RESPONSE = {
     "topic": "Withdrawal Management",
-    "summary": "Withdrawal occurs as the body readjusts to functioning without substances.",
-    "key_points": ["Symptoms vary by substance", "Medical supervision is recommended"],
-    "coping_strategies": ["Stay hydrated", "Rest frequently"],
+    "overview": "Withdrawal occurs as the body readjusts to functioning without substances.",
+    "key_takeaways": ["Symptoms vary by substance", "Medical supervision is recommended"],
+    "actionable_strategies": ["Stay hydrated", "Rest frequently"],
     "when_to_seek_help": "Seek immediate help if symptoms become severe.",
-    "resources": ["SAMHSA National Helpline: 1-800-662-4357"]
+    "related_topics": ["Urge Surfing", "CBT Techniques"]
 }
 
 
@@ -279,9 +279,9 @@ class TestEducationEndpoint:
             })
         data = response.json()
         assert "topic" in data
-        assert "summary" in data
-        assert "key_points" in data
-        assert "coping_strategies" in data
+        assert "overview" in data
+        assert "key_takeaways" in data
+        assert "actionable_strategies" in data
 
     @pytest.mark.anyio
     async def test_education_rejects_missing_topic(self, client):
@@ -297,10 +297,9 @@ class TestEducationEndpoint:
 MOCK_CHECKIN_RESPONSE = {
     "recovery_summary": "You are showing strong resilience today.",
     "risk_level": "Low",
-    "risk_score": 25,
-    "immediate_actions": ["Continue daily journaling", "Connect with your sponsor"],
-    "positive_reinforcement": "Your streak shows incredible commitment.",
-    "weekly_focus": "Practice mindfulness for 10 minutes daily."
+    "positive_highlights": ["Consistent daily check-in habit built", "High self-awareness"],
+    "personalized_recommendations": ["Engage in 5-min 4-4-6 box breathing", "Connect with sponsor"],
+    "suggested_focus": "Focus today on grounding techniques and stress reduction."
 }
 
 
@@ -359,11 +358,11 @@ class TestCheckInEndpoint:
 
 MOCK_SAFETY_RESPONSE = {
     "risk_level": "Moderate",
-    "risk_score": 55,
-    "immediate_safety_actions": ["Call your sponsor", "Remove access to substances"],
-    "grounding_technique": "5-4-3-2-1 sensory grounding exercise.",
-    "recommended_resources": ["988 Lifeline", "SMART Recovery"],
-    "crisis_indicators": False
+    "triggers_detected": ["Craving level 8/10", "Stress level 7/10"],
+    "immediate_actions": ["Activate SOS Emergency Script mode", "Practice 4-4-6 breathing"],
+    "grounding_prompt": "Look around and name 5 things you can see, 4 you can touch, 3 you can hear.",
+    "hydration_reminder": "Drink 250ml of cold water to assist physiological grounding.",
+    "contact_recommendation": "Notify your primary support contact about your stress level today."
 }
 
 
@@ -391,8 +390,8 @@ class TestSafetyAnalyzerEndpoint:
             })
         data = response.json()
         assert "risk_level" in data
-        assert "immediate_safety_actions" in data
-        assert "grounding_technique" in data
+        assert "immediate_actions" in data
+        assert "grounding_prompt" in data
 
     @pytest.mark.anyio
     async def test_safety_accepts_optional_fields(self, client):

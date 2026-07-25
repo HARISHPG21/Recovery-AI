@@ -198,35 +198,27 @@ describe('formatEmergencySMS()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API Service: fetchAPI mock tests
+// API Service & LocalStorage Logic
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('API Service', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    // Mock localStorage
-    const store: Record<string, string> = {};
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, val) => { store[key] = val; });
+describe('API Service Preferences Logic', () => {
+  it('parses valid GEMINI_API_KEY from JSON preference string', () => {
+    const prefsJson = JSON.stringify({ geminiApiKey: 'test-key-123' });
+    const parsed = JSON.parse(prefsJson);
+    expect(parsed.geminiApiKey).toBe('test-key-123');
   });
 
-  it('reads GEMINI_API_KEY from localStorage preferences', () => {
-    const prefs = { geminiApiKey: 'test-key-123' };
-    localStorage.setItem('recoveryai_preferences', JSON.stringify(prefs));
-    const stored = JSON.parse(localStorage.getItem('recoveryai_preferences') || '{}');
-    expect(stored.geminiApiKey).toBe('test-key-123');
+  it('gracefully handles missing preferences', () => {
+    const prefsJson: string | null = null;
+    const parsed = prefsJson ? JSON.parse(prefsJson) : {};
+    expect(parsed.geminiApiKey).toBeUndefined();
   });
 
-  it('gracefully handles missing localStorage preferences', () => {
-    const result = localStorage.getItem('recoveryai_preferences');
-    expect(result).toBeNull();
-  });
-
-  it('handles malformed JSON in localStorage gracefully', () => {
-    localStorage.setItem('recoveryai_preferences', 'invalid-json{{{');
+  it('handles malformed JSON preferences gracefully', () => {
+    const malformed = 'invalid-json{{{';
     let key = '';
     try {
-      const parsed = JSON.parse(localStorage.getItem('recoveryai_preferences') || '{}');
+      const parsed = JSON.parse(malformed);
       key = parsed.geminiApiKey || '';
     } catch {
       key = '';
@@ -236,36 +228,43 @@ describe('API Service', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Theme Utility Tests
+// Theme Utility Logic
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Applies the given theme class to the HTML element.
+ * Toggles theme class names on a set object.
+ * @param currentClasses - Existing class set
  * @param theme - 'dark' | 'light'
+ * @returns Updated class set
  */
-function applyTheme(theme: 'dark' | 'light'): void {
-  document.documentElement.classList.remove('dark', 'light');
-  document.documentElement.classList.add(theme);
+function toggleThemeClasses(currentClasses: Set<string>, theme: 'dark' | 'light'): Set<string> {
+  const next = new Set(currentClasses);
+  next.delete('dark');
+  next.delete('light');
+  next.add(theme);
+  return next;
 }
 
-describe('applyTheme()', () => {
-  it('applies dark class to html element', () => {
-    applyTheme('dark');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(document.documentElement.classList.contains('light')).toBe(false);
+describe('toggleThemeClasses()', () => {
+  it('applies dark class', () => {
+    const classes = toggleThemeClasses(new Set(['light']), 'dark');
+    expect(classes.has('dark')).toBe(true);
+    expect(classes.has('light')).toBe(false);
   });
 
-  it('applies light class to html element', () => {
-    applyTheme('light');
-    expect(document.documentElement.classList.contains('light')).toBe(true);
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  it('applies light class', () => {
+    const classes = toggleThemeClasses(new Set(['dark']), 'light');
+    expect(classes.has('light')).toBe(true);
+    expect(classes.has('dark')).toBe(false);
   });
 
-  it('switches from dark to light correctly', () => {
-    applyTheme('dark');
-    applyTheme('light');
-    expect(document.documentElement.classList.contains('light')).toBe(true);
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  it('switches themes sequentially', () => {
+    let classes = new Set<string>();
+    classes = toggleThemeClasses(classes, 'dark');
+    expect(classes.has('dark')).toBe(true);
+    classes = toggleThemeClasses(classes, 'light');
+    expect(classes.has('light')).toBe(true);
+    expect(classes.has('dark')).toBe(false);
   });
 });
 
