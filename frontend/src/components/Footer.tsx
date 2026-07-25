@@ -2,6 +2,15 @@ import React from 'react';
 import { Shield, PhoneCall } from 'lucide-react';
 import { useRecovery } from '../context/RecoveryContext';
 
+/**
+ * Footer Component
+ * 
+ * Application footer containing medical disclaimer, crisis hotline quick-dials (988 & SAMHSA),
+ * quick feature site links, and Google Gemini engine attribution.
+ * 
+ * @component
+ * @returns {React.ReactElement} Application footer view
+ */
 export const Footer: React.FC = () => {
   const { isDark } = useRecovery();
 

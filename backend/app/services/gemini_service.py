@@ -276,6 +276,22 @@ class GeminiService:
         journal_entry: str = "",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """
+        Evaluates holistic check-in metrics (mood, stress, sleep, energy, cravings, journal text)
+        to output structured recovery summary, risk classification, positive highlights, and recommendations.
+
+        Args:
+            mood: 1-10 rating.
+            stress: 1-10 rating.
+            sleep: 1-10 rating.
+            energy: 1-10 rating.
+            cravings: 0-10 rating.
+            journal_entry: Optional reflection text.
+            custom_api_key: Optional client-provided API Key.
+
+        Returns:
+            Dict matching CheckInResponse schema.
+        """
         # Determine risk tier baseline
         calculated_risk = "Low"
         if cravings >= 7 or stress >= 8 or sleep <= 3:
@@ -320,6 +336,20 @@ class GeminiService:
         recent_text: str = "",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """
+        Analyzes acute risk indicators and text input to evaluate real-time safety risk levels.
+
+        Args:
+            cravings: 0-10 rating.
+            stress: 1-10 rating.
+            sleep: 1-10 rating.
+            isolation_score: 1-10 rating.
+            recent_text: Optional recent journal text.
+            custom_api_key: Optional client-provided API Key.
+
+        Returns:
+            Dict matching SafetyAnalyzeResponse schema.
+        """
         # Calculate risk
         risk_level = "Low"
         if cravings >= 8 or stress >= 8 or isolation_score >= 8:
@@ -356,6 +386,15 @@ class GeminiService:
         return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_daily_motivation(self, custom_api_key: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Synthesizes daily inspirational recovery quote, reflection prompt, and focus area.
+
+        Args:
+            custom_api_key: Optional client-provided API Key.
+
+        Returns:
+            Dict matching MotivationResponse schema.
+        """
         prompt = f"{SYSTEM_BASE_PROMPT}\n\nGenerate an inspiring daily recovery motivation quote, author, reflection prompt, and focus area in valid JSON with keys: quote, author, reflection_prompt, daily_focus."
         
         fallback = {

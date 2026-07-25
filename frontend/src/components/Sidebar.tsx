@@ -15,6 +15,15 @@ import {
 } from 'lucide-react';
 import { useRecovery } from '../context/RecoveryContext';
 
+/**
+ * Sidebar Component
+ * 
+ * Desktop lateral navigation panel displaying active route links for all 10 core features,
+ * active streak counter badge, and danger-highlighted SOS emergency shortcut.
+ * 
+ * @component
+ * @returns {React.ReactElement} Sidebar navigation component
+ */
 export const Sidebar: React.FC = () => {
   const { streakDays, isDark } = useRecovery();
 

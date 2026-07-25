@@ -23,6 +23,8 @@ import { ToolkitPage } from './pages/ToolkitPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 export const App: React.FC = () => {
   return (
     <RecoveryProvider>
@@ -50,21 +52,23 @@ export const App: React.FC = () => {
             <div className="flex-1 flex max-w-[1600px] w-full mx-auto relative z-10">
               <Sidebar />
               <main id="main-content" tabIndex={-1} role="main" aria-label="Main Application Content" className="flex-1 min-w-0 pb-16 outline-none">
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/coach" element={<VoiceCoachPage />} />
-                  <Route path="/emergency" element={<EmergencyPage />} />
-                  <Route path="/caregiver" element={<CaregiverPage />} />
-                  <Route path="/education" element={<EducationPage />} />
-                  <Route path="/checkin" element={<CheckInPage />} />
-                  <Route path="/safety" element={<SafetyPage />} />
-                  <Route path="/breathing" element={<BreathingPage />} />
-                  <Route path="/toolkit" element={<ToolkitPage />} />
-                  <Route path="/progress" element={<ProgressPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                <ErrorBoundary>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/coach" element={<VoiceCoachPage />} />
+                    <Route path="/emergency" element={<EmergencyPage />} />
+                    <Route path="/caregiver" element={<CaregiverPage />} />
+                    <Route path="/education" element={<EducationPage />} />
+                    <Route path="/checkin" element={<CheckInPage />} />
+                    <Route path="/safety" element={<SafetyPage />} />
+                    <Route path="/breathing" element={<BreathingPage />} />
+                    <Route path="/toolkit" element={<ToolkitPage />} />
+                    <Route path="/progress" element={<ProgressPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </ErrorBoundary>
               </main>
             </div>
 
