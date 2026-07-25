@@ -505,3 +505,71 @@ class TestSecurityHeaders:
         """Using wrong HTTP method should return 405 Method Not Allowed."""
         response = await client.get("/api/ai/coach")
         assert response.status_code == 405
+
+    @pytest.mark.anyio
+    async def test_security_headers_present(self, client):
+        """Security headers must be attached to every response."""
+        response = await client.get("/api/health")
+        assert "x-content-type-options" in response.headers
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert "x-frame-options" in response.headers
+        assert response.headers["x-frame-options"] == "DENY"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# End-to-End Full User Journey Integration Tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestFullUserJourney:
+    """Integration test suite simulating a full patient recovery crisis flow."""
+
+    @pytest.mark.anyio
+    async def test_full_recovery_flow(self, client):
+        """Simulates: Check-in -> High Craving Alert -> Voice Coach Intervention -> SOS Emergency -> Caregiver Support."""
+        # 1. Health check
+        h_res = await client.get("/api/health")
+        assert h_res.status_code == 200
+
+        # 2. Daily Check-in with high craving
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_CHECKIN_RESPONSE):
+            ci_res = await client.post("/api/ai/checkin-analysis", json={
+                "mood": 3, "stress": 9, "sleep": 3, "energy": 2, "cravings": 9
+            })
+            assert ci_res.status_code == 200
+
+        # 3. Trigger Safety Analyzer
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_SAFETY_RESPONSE):
+            s_res = await client.post("/api/ai/safety-analyze", json={
+                "cravings": 9, "stress": 9, "sleep": 3
+            })
+            assert s_res.status_code == 200
+
+        # 4. Voice Coach query
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_COACH_RESPONSE):
+            vc_res = await client.post("/api/ai/coach", json={
+                "user_input": "I am having an intense craving wave and need immediate help."
+            })
+            assert vc_res.status_code == 200
+
+        # 5. Trigger SOS Emergency Script
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_EMERGENCY_RESPONSE):
+            e_res = await client.post("/api/ai/emergency", json={
+                "trigger_reason": "Acute craving surge",
+                "user_name": "Test User",
+                "trusted_contact_name": "Sponsor Sam"
+            })
+            assert e_res.status_code == 200
+            assert "emergency_message" in e_res.json()
+
+        # 6. Caregiver query
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_CAREGIVER_RESPONSE):
+            cg_res = await client.post("/api/ai/caregiver", json={
+                "question": "How can I best support someone having an acute craving right now?"
+            })
+            assert cg_res.status_code == 200
+

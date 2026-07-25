@@ -1,5 +1,6 @@
 import logging
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import ai, health
@@ -10,8 +11,25 @@ logger = logging.getLogger("main")
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Production-grade AI Powered Recovery & Prevention Platform API"
+    description="Production-grade AI Powered Recovery & Prevention Platform API",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
+
+# ── Security Headers Middleware ────────────────────────────────────────────────
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    start_time = time.time()
+    response: Response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+    return response
 
 # CORS setup
 allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
@@ -22,8 +40,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Gemini-Api-Key"],
 )
 
 app.include_router(health.router)
@@ -33,8 +51,10 @@ app.include_router(ai.router)
 async def root():
     return {
         "message": "Welcome to RecoveryAI Backend API",
+        "version": settings.APP_VERSION,
         "docs_url": "/docs",
-        "health": "/api/health"
+        "health": "/api/health",
+        "security": "enabled"
     }
 
 if __name__ == "__main__":

@@ -1,11 +1,26 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
+import re
+
+def sanitize_input_text(v: str) -> str:
+    """Sanitizes user input string by stripping unprintable control characters and trimming length."""
+    if not v:
+        return ""
+    # Strip null bytes and control chars
+    v = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', v)
+    # Trim excessive length to prevent overflow
+    return v.strip()[:2000]
 
 # Coach schemas
 class CoachRequest(BaseModel):
-    user_input: str = Field(..., description="Speech transcript or user text prompt")
+    user_input: str = Field(..., min_length=1, description="Speech transcript or user text prompt")
     conversation_history: Optional[List[Dict[str, str]]] = Field(default=[], description="Previous conversation turns")
     user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user metrics or state")
+
+    @field_validator('user_input')
+    @classmethod
+    def sanitize_user_input(cls, v: str) -> str:
+        return sanitize_input_text(v)
 
 class CoachResponse(BaseModel):
     empathetic_response: str

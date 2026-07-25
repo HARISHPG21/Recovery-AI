@@ -32,6 +32,14 @@ export const App: React.FC = () => {
             className="relative min-h-screen flex flex-col text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200"
             style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
           >
+            {/* Skip to Main Content Link for Screen Readers */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:shadow-xl focus:outline-none"
+            >
+              Skip to main content
+            </a>
+
             {/* Ambient Particle Mesh Canvas */}
             <BackgroundParticles />
 
@@ -41,7 +49,7 @@ export const App: React.FC = () => {
             {/* Main Layout Container with Desktop Sidebar */}
             <div className="flex-1 flex max-w-[1600px] w-full mx-auto relative z-10">
               <Sidebar />
-              <main className="flex-1 min-w-0 pb-16">
+              <main id="main-content" tabIndex={-1} role="main" aria-label="Main Application Content" className="flex-1 min-w-0 pb-16 outline-none">
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />

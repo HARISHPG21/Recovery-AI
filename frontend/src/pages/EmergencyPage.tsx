@@ -138,7 +138,11 @@ export const EmergencyPage: React.FC = () => {
           className="space-y-6"
         >
           {/* Action Toolbar */}
-          <div className="glass-card p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 border border-rose-500/40 bg-rose-950/20">
+          <div 
+            className="glass-card p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 border border-rose-500/40 bg-rose-950/20"
+            role="alert"
+            aria-live="assertive"
+          >
             <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
               <ShieldCheck className="w-5 h-5 text-rose-400" />
               <span>SOS Script Active</span>

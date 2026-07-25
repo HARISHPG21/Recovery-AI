@@ -176,7 +176,13 @@ export const VoiceCoachPage: React.FC = () => {
       </div>
 
       {/* Main Chat Conversation Container */}
-      <div className="flex-1 glass-card rounded-2xl p-4 sm:p-6 border border-white/10 overflow-y-auto space-y-6 max-h-[550px] min-h-[350px]">
+      <div 
+        className="flex-1 glass-card rounded-2xl p-4 sm:p-6 border border-white/10 overflow-y-auto space-y-6 max-h-[550px] min-h-[350px]"
+        aria-live="polite"
+        aria-relevant="additions"
+        role="log"
+        aria-label="Conversation Log with Voice AI Coach"
+      >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 space-y-4 text-slate-400">
             <div className="w-16 h-16 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 animate-pulse">
