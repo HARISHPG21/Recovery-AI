@@ -4,6 +4,15 @@ import { Shield, AlertCircle, Mic, Menu, X, Sun, Moon } from 'lucide-react';
 import { Button } from './Button';
 import { useRecovery } from '../context/RecoveryContext';
 
+/**
+ * Navbar Component
+ * 
+ * Top glassmorphism navigation header supporting theme toggling (Light / Dark),
+ * responsive desktop links, mobile navigation drawer, and persistent SOS / Voice Coach CTA actions.
+ * 
+ * @component
+ * @returns {React.ReactElement} The rendered Navbar header element.
+ */
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const { isDark, toggleTheme } = useRecovery();
