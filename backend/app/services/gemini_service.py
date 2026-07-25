@@ -1,6 +1,9 @@
 import json
 import logging
 import re
+import hashlib
+import time
+from functools import lru_cache
 from typing import Dict, Any, Optional
 from app.config import settings
 from app.prompts import (
@@ -14,6 +17,34 @@ from app.prompts import (
 )
 
 logger = logging.getLogger("gemini_service")
+
+# ── In-memory response cache (TTL: 5 minutes) ─────────────────────────────────
+_response_cache: Dict[str, Dict[str, Any]] = {}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
+
+def _cache_key(prompt: str) -> str:
+    """Generates a stable MD5 cache key from the prompt string."""
+    return hashlib.md5(prompt.encode("utf-8")).hexdigest()
+
+
+def _get_cached(key: str) -> Optional[Dict[str, Any]]:
+    """Returns cached response if still valid within TTL, else None."""
+    entry = _response_cache.get(key)
+    if entry and (time.time() - entry["ts"]) < _CACHE_TTL_SECONDS:
+        logger.info(f"Cache HIT for key {key[:8]}...")
+        return entry["data"]
+    return None
+
+
+def _set_cached(key: str, data: Dict[str, Any]) -> None:
+    """Stores a response in the in-memory cache with a timestamp."""
+    _response_cache[key] = {"data": data, "ts": time.time()}
+    # Evict old entries if cache grows too large (max 100 entries)
+    if len(_response_cache) > 100:
+        oldest = min(_response_cache, key=lambda k: _response_cache[k]["ts"])
+        del _response_cache[oldest]
+
 
 class GeminiService:
     def __init__(self):
@@ -48,10 +79,28 @@ class GeminiService:
         return text
 
     async def generate_response(self, prompt: str, fallback_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Calls Gemini API with the given prompt, returning parsed JSON or intelligent fallback."""
+        """
+        Calls Gemini API with the given prompt, returning parsed JSON or intelligent fallback.
+
+        Uses an in-memory LRU-style cache with a 5-minute TTL to avoid redundant
+        API calls for identical prompts, significantly improving response efficiency.
+
+        Args:
+            prompt: The full prompt string to send to Gemini.
+            fallback_data: Structured fallback data returned if API is unavailable.
+
+        Returns:
+            Parsed JSON dict from Gemini, cached result, or fallback data.
+        """
         if not self.client or not self.api_key:
             logger.info("Using intelligent dynamic fallback engine (No API Key set).")
             return fallback_data
+
+        # ── Cache lookup ────────────────────────────────────────────────────
+        key = _cache_key(prompt)
+        cached = _get_cached(key)
+        if cached is not None:
+            return cached
 
         try:
             raw_text = ""
@@ -67,9 +116,11 @@ class GeminiService:
                 # google.generativeai Model
                 response = self.client.generate_content(prompt)
                 raw_text = response.text
-            
+
             cleaned = self._clean_json_response(raw_text)
             parsed = json.loads(cleaned)
+            # ── Cache the successful result ─────────────────────────────────
+            _set_cached(key, parsed)
             return parsed
         except Exception as e:
             logger.error(f"Gemini API call error: {e}. Falling back to dynamic generator.")
