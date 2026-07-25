@@ -1,14 +1,32 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-interface CardProps {
+/**
+ * Interface props for the Card component.
+ */
+export interface CardProps {
+  /** Node contents of the card container */
   children: React.ReactNode;
+  /** Additional CSS class names */
   className?: string;
+  /** Whether hover animations and borders are enabled */
   hoverEffect?: boolean;
+  /** Ambient glow accent color */
   glowColor?: 'indigo' | 'teal' | 'rose' | 'amber';
+  /** Optional click event callback */
   onClick?: () => void;
 }
 
+/**
+ * Card Component
+ * 
+ * Reusable glassmorphism card container with subtle ambient glow highlights,
+ * framer-motion entry animations, and responsive interactive hover states.
+ * 
+ * @component
+ * @param {CardProps} props - Component properties
+ * @returns {React.ReactElement} Animated glass card element
+ */
 export const Card: React.FC<CardProps> = ({
   children,
   className = '',

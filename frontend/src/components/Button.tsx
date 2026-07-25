@@ -1,15 +1,34 @@
 import React from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 
-interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
+/**
+ * Interface props for the Button component.
+ */
+export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
+  /** Button text or inner elements */
   children: React.ReactNode;
+  /** Color variant style */
   variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost' | 'teal';
+  /** Button size padding and typography scale */
   size?: 'sm' | 'md' | 'lg';
+  /** Shows an animated loading spinner when true */
   isLoading?: boolean;
+  /** Optional icon element displayed to the left of label */
   leftIcon?: React.ReactNode;
+  /** Optional icon element displayed to the right of label */
   rightIcon?: React.ReactNode;
 }
 
+/**
+ * Button Component
+ * 
+ * Accessible, animated interactive button with Framer Motion tactile feedback,
+ * loading state spinner, icon slots, and theme-compliant color variants.
+ * 
+ * @component
+ * @param {ButtonProps} props - Component properties
+ * @returns {React.ReactElement} Motion button element
+ */
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',

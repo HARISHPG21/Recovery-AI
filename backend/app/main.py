@@ -1,3 +1,10 @@
+"""
+RecoveryAI Backend Main Application Module
+
+Production-grade FastAPI application providing secure CORS policies,
+security header middleware, openapi tags metadata, and route inclusion.
+"""
+
 import logging
 import time
 from fastapi import FastAPI, Request, Response
@@ -8,10 +15,22 @@ from app.routers import ai, health
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("main")
 
+tags_metadata = [
+    {
+        "name": "Health Status",
+        "description": "System readiness, version, and Gemini API configuration health checks.",
+    },
+    {
+        "name": "AI Engine",
+        "description": "Google Gemini 2.5 powered recovery interventions, voice coaching, SOS scripts, and caregiver guides.",
+    },
+]
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Production-grade AI Powered Recovery & Prevention Platform API",
+    openapi_tags=tags_metadata,
     docs_url="/docs",
     redoc_url="/redoc"
 )
