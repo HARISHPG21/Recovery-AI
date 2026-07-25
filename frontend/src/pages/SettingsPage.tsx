@@ -40,6 +40,34 @@ export const SettingsPage: React.FC = () => {
         </p>
       </div>
 
+      {/* Gemini API Key Configuration Card */}
+      <Card glowColor="amber" className="space-y-4">
+        <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">
+          <Shield className="w-5 h-5 text-amber-400" />
+          Google Gemini API Key Configuration
+        </h3>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          The backend automatically connects using its server environment key (<code className="text-amber-300 font-mono">GEMINI_API_KEY</code>). You can also provide a custom key below for live testing.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <input
+            type="password"
+            placeholder="Paste your Gemini API key (AIzaSy...)"
+            value={preferences.geminiApiKey || ''}
+            onChange={e => updatePreferences({ geminiApiKey: e.target.value })}
+            className="w-full glass-input px-4 py-2.5 rounded-xl text-xs"
+          />
+          <Button
+            variant="teal"
+            size="md"
+            onClick={() => showToast(preferences.geminiApiKey ? 'Custom Gemini API Key saved!' : 'Using server default GEMINI_API_KEY', 'success')}
+            className="w-full sm:w-auto shrink-0"
+          >
+            Save Key
+          </Button>
+        </div>
+      </Card>
+
       {/* Voice & Speech Synthesis Settings */}
       <Card glowColor="indigo" className="space-y-6">
         <h3 className="text-lg font-bold text-white font-outfit flex items-center gap-2">

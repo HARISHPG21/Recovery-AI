@@ -93,6 +93,7 @@ export interface UserPreferences {
   autoSpeak: boolean;
   largeFont: boolean;
   caregiverMode: boolean;
+  geminiApiKey?: string;
 }
 
 export interface DailyMotivation {

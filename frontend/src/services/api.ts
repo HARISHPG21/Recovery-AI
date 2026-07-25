@@ -12,12 +12,29 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  let customApiKey = '';
+  try {
+    const prefs = localStorage.getItem('recoveryai_preferences');
+    if (prefs) {
+      const parsed = JSON.parse(prefs);
+      if (parsed.geminiApiKey) customApiKey = parsed.geminiApiKey;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (customApiKey) {
+    headers['X-Gemini-Api-Key'] = customApiKey;
+  }
+
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
