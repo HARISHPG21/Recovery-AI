@@ -143,6 +143,7 @@ Frontend application will open at: `http://localhost:5173`.
 
 ---
 
-## 📜 License
+## 📜 License & Credit
 
+Made with Harish P.G. for compassionate AI healthcare.  
 This project is licensed under the [MIT License](LICENSE).

@@ -72,9 +72,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
         <span>© 2026 RecoveryAI Platform. Built for Google PromptWars Hackathon.</span>
         <div className="flex items-center gap-1 text-slate-400">
-          <span>Made with</span>
-          <Heart className="w-3.5 h-3.5 text-rose-500 fill-current inline" />
-          <span>for compassionate AI healthcare</span>
+          <span>Made with Harish P.G. for compassionate AI healthcare</span>
         </div>
       </div>
     </footer>
