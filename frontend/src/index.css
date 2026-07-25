@@ -2,31 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────
+   CSS Custom Properties – Dark Theme (default)
+───────────────────────────────────────────────── */
+:root {
+  --bg-primary:      #090D16;
+  --bg-surface:      #111827;
+  --bg-card:         rgba(255,255,255,0.04);
+  --bg-panel:        rgba(17,24,39,0.65);
+  --border-subtle:   rgba(255,255,255,0.08);
+  --border-medium:   rgba(255,255,255,0.12);
+  --text-primary:    #f1f5f9;
+  --text-secondary:  #94a3b8;
+  --text-muted:      #64748b;
+  --scroll-track:    rgba(9,13,22,0.8);
+  --scroll-thumb:    rgba(255,255,255,0.15);
+}
+
+/* ─────────────────────────────────────────────────
+   CSS Custom Properties – Light Theme
+───────────────────────────────────────────────── */
+html.light {
+  --bg-primary:      #f1f5fb;
+  --bg-surface:      #ffffff;
+  --bg-card:         rgba(255,255,255,0.80);
+  --bg-panel:        rgba(255,255,255,0.75);
+  --border-subtle:   rgba(99,102,241,0.12);
+  --border-medium:   rgba(99,102,241,0.18);
+  --text-primary:    #0f172a;
+  --text-secondary:  #334155;
+  --text-muted:      #64748b;
+  --scroll-track:    #e2e8f0;
+  --scroll-thumb:    rgba(99,102,241,0.3);
+}
+
+/* ─────────────────────────────────────────────────
+   Base Styles
+───────────────────────────────────────────────── */
 @layer base {
   body {
-    @apply bg-[#090D16] text-slate-100 min-h-screen overflow-x-hidden;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    @apply min-h-screen overflow-x-hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.35s ease, color 0.35s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
   }
+
+  input, textarea, select {
+    color: var(--text-primary);
+    background-color: transparent;
+  }
 }
 
-/* Glassmorphism Styles */
+/* ─────────────────────────────────────────────────
+   Glassmorphism – Dark
+───────────────────────────────────────────────── */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.65);
+  background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.20);
 }
 
 .glass-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ─────────────────────────────────────────────────
+   Glassmorphism – Light overrides
+───────────────────────────────────────────────── */
+html.light .glass-panel {
+  box-shadow: 0 4px 24px 0 rgba(99,102,241,0.08);
+}
+
+html.light .glass-card {
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.07);
 }
 
 .glass-card-hover {
@@ -34,16 +92,27 @@
 }
 
 .glass-card-hover:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
   border-color: rgba(99, 102, 241, 0.4);
   transform: translateY(-2px);
   box-shadow: 0 12px 28px -6px rgba(99, 102, 241, 0.15);
 }
 
+html.light .glass-card-hover:hover {
+  background: rgba(99,102,241,0.07);
+  box-shadow: 0 12px 28px -6px rgba(99,102,241,0.18);
+}
+
+/* ─────────────────────────────────────────────────
+   Inputs
+───────────────────────────────────────────────── */
 .glass-input {
   background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: white;
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+}
+
+html.light .glass-input {
+  background: rgba(241,245,251,0.8);
 }
 
 .glass-input:focus {
@@ -52,38 +121,122 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
-/* Text Gradients */
+/* ─────────────────────────────────────────────────
+   Text Gradients
+───────────────────────────────────────────────── */
 .text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-teal-300 to-emerald-400;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-teal-400 to-emerald-400;
 }
 
 .text-gradient-rose {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-rose-400 via-pink-400 to-amber-300;
 }
 
-/* Breathing animation helper */
+/* ─────────────────────────────────────────────────
+   Shared component overrides for light theme
+───────────────────────────────────────────────── */
+/* Navbar, Sidebar, Footer backgrounds in light mode */
+html.light header.sticky,
+html.light aside,
+html.light footer {
+  background: rgba(255,255,255,0.88) !important;
+  border-color: rgba(99,102,241,0.14) !important;
+}
+
+/* ── Text color remaps for light mode ── */
+
+/* text-white → near-black in light */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Dark background utilities → light equivalents */
+html.light .bg-\[\#090D16\] {
+  background-color: #f1f5fb !important;
+}
+
+html.light .bg-slate-900\/60,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-950\/40 {
+  background: rgba(238,242,255,0.75) !important;
+}
+
+html.light .bg-slate-800,
+html.light .bg-slate-900,
+html.light .bg-slate-950 {
+  background-color: #e8edf7 !important;
+}
+
+/* Border remaps for light */
+html.light .border-white\/10,
+html.light .border-white\/5,
+html.light .border-white\/8 {
+  border-color: rgba(99,102,241,0.14) !important;
+}
+
+/* Dark inner sub-panels (like bg-slate-950/50) */
+html.light [class*="bg-slate-950"] {
+  background-color: rgba(238,242,255,0.7) !important;
+}
+
+/* Cards that specify dark-only bg */
+html.light [class*="bg-teal-950"],
+html.light [class*="bg-rose-950"],
+html.light [class*="bg-indigo-950"],
+html.light [class*="bg-amber-950"] {
+  background-color: rgba(238,242,255,0.6) !important;
+}
+
+/* Progress bar track in light */
+html.light .bg-slate-800 {
+  background-color: #d1d9ef !important;
+}
+
+/* ─────────────────────────────────────────────────
+   Breathing animation
+───────────────────────────────────────────────── */
 @keyframes breathingPulse {
-  0% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 20px rgba(45, 212, 191, 0.3); }
-  40% { transform: scale(1.35); opacity: 1; box-shadow: 0 0 60px rgba(45, 212, 191, 0.8); }
-  80% { transform: scale(1.35); opacity: 1; box-shadow: 0 0 60px rgba(45, 212, 191, 0.8); }
-  100% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 20px rgba(45, 212, 191, 0.3); }
+  0%   { transform: scale(1);    opacity: 0.7; box-shadow: 0 0 20px rgba(45, 212, 191, 0.3); }
+  40%  { transform: scale(1.35); opacity: 1;   box-shadow: 0 0 60px rgba(45, 212, 191, 0.8); }
+  80%  { transform: scale(1.35); opacity: 1;   box-shadow: 0 0 60px rgba(45, 212, 191, 0.8); }
+  100% { transform: scale(1);    opacity: 0.7; box-shadow: 0 0 20px rgba(45, 212, 191, 0.3); }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ─────────────────────────────────────────────────
+   Custom Scrollbar
+───────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb        { background: var(--scroll-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover  { background: rgba(99, 102, 241, 0.4); }
+
+/* ─────────────────────────────────────────────────
+   Responsive Typography helpers
+───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  h1 { font-size: clamp(1.75rem, 6vw, 3rem); }
+  h2 { font-size: clamp(1.35rem, 5vw, 2.25rem); }
+  h3 { font-size: clamp(1.1rem,  4vw, 1.5rem); }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(9, 13, 22, 0.8);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.4);
+/* ─────────────────────────────────────────────────
+   Safe area for notched/PWA mobile devices
+───────────────────────────────────────────────── */
+@supports (padding: max(0px)) {
+  .safe-top    { padding-top:    max(1rem, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 }

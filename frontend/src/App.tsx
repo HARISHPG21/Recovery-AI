@@ -28,7 +28,10 @@ export const App: React.FC = () => {
     <RecoveryProvider>
       <VoiceProvider>
         <Router>
-          <div className="relative min-h-screen flex flex-col bg-[#090D16] text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200">
+          <div
+            className="relative min-h-screen flex flex-col text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200"
+            style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          >
             {/* Ambient Particle Mesh Canvas */}
             <BackgroundParticles />
 

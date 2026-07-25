@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CheckInLog, EmergencyContact, UserPreferences, DailyMotivation } from '../types';
 import { apiService } from '../services/api';
 
@@ -15,6 +15,8 @@ interface RecoveryContextType {
   preferences: UserPreferences;
   motivation: DailyMotivation | null;
   toasts: Toast[];
+  isDark: boolean;
+  toggleTheme: () => void;
   addCheckIn: (log: Omit<CheckInLog, 'id' | 'date'>) => Promise<CheckInLog>;
   addEmergencyContact: (contact: Omit<EmergencyContact, 'id'>) => void;
   removeEmergencyContact: (id: string) => void;
@@ -44,6 +46,27 @@ const DEFAULT_CONTACTS: EmergencyContact[] = [
 const RecoveryContext = createContext<RecoveryContextType | undefined>(undefined);
 
 export const RecoveryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // ── Theme ──────────────────────────────────────────
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('recoveryai_theme');
+    return saved ? saved === 'dark' : true; // default dark
+  });
+
+  useEffect(() => {
+    const html = document.documentElement;
+    if (isDark) {
+      html.classList.remove('light');
+      html.classList.add('dark');
+    } else {
+      html.classList.remove('dark');
+      html.classList.add('light');
+    }
+    localStorage.setItem('recoveryai_theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const toggleTheme = useCallback(() => setIsDark(d => !d), []);
+
+  // ── Check-Ins ──────────────────────────────────────
   // Load state from localStorage
   const [checkIns, setCheckIns] = useState<CheckInLog[]>(() => {
     try {
@@ -219,6 +242,8 @@ export const RecoveryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         preferences,
         motivation,
         toasts,
+        isDark,
+        toggleTheme,
         addCheckIn,
         addEmergencyContact,
         removeEmergencyContact,
