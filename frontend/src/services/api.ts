@@ -1,3 +1,10 @@
+/**
+ * RecoveryAI Service Layer
+ * 
+ * Asynchronous HTTP client providing typed integration with backend FastAPI AI endpoints.
+ * Handles automatic propagation of custom user Gemini API keys stored in localStorage.
+ */
+
 import {
   CoachResponse,
   EmergencyScript,
@@ -10,6 +17,14 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+/**
+ * Generic HTTP fetch helper with automatic header injection and error handling.
+ * 
+ * @template T - Expected response JSON type
+ * @param endpoint - Relative API endpoint path
+ * @param options - Fetch RequestInit options
+ * @returns Parsed JSON response
+ */
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   let customApiKey = '';
@@ -46,7 +61,9 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 }
 
 export const apiService = {
-  // Feature 1: Voice AI Recovery Coach
+  /**
+   * Sends user speech transcripts or text prompts to the Voice AI Coach endpoint.
+   */
   async sendCoachPrompt(
     userInput: string,
     history: { sender: string; text: string }[] = [],
@@ -62,47 +79,58 @@ export const apiService = {
       body: JSON.stringify({
         user_input: userInput,
         conversation_history: formattedHistory,
-        user_context: context,
-      }),
+        user_context: context
+      })
     });
   },
 
-  // Feature 2: SOS Emergency Script Generator
+  /**
+   * Triggers single-tap SOS Emergency Mode to generate personalized crisis intervention scripts.
+   */
   async triggerEmergency(
-    triggerReason = 'Acute craving / panic',
-    userName = 'Friend',
-    trustedContact = 'Trusted Support'
+    triggerReason: string = 'Acute craving surge',
+    userName: string = 'Friend',
+    trustedContact: string = 'Trusted Support'
   ): Promise<EmergencyScript> {
     return fetchAPI<EmergencyScript>('/api/ai/emergency', {
       method: 'POST',
       body: JSON.stringify({
         trigger_reason: triggerReason,
         user_name: userName,
-        trusted_contact_name: trustedContact,
-      }),
+        trusted_contact_name: trustedContact
+      })
     });
   },
 
-  // Feature 3: Caregiver Guidance
-  async askCaregiverQuestion(question: string, patientContext = ''): Promise<CaregiverGuide> {
+  /**
+   * Queries the Caregiver Assistant for evidence-based de-escalation protocols.
+   */
+  async askCaregiverQuestion(
+    question: string,
+    patientContext: string = ''
+  ): Promise<CaregiverGuide> {
     return fetchAPI<CaregiverGuide>('/api/ai/caregiver', {
       method: 'POST',
       body: JSON.stringify({
         question,
-        patient_context: patientContext,
-      }),
+        patient_context: patientContext
+      })
     });
   },
 
-  // Feature 4: AI Education Hub Search
-  async searchEducation(topic: string): Promise<EducationArticle> {
+  /**
+   * Searches the AI Education Hub to synthesize evidence-based articles.
+   */
+  async fetchEducationTopic(topic: string): Promise<EducationArticle> {
     return fetchAPI<EducationArticle>('/api/ai/education', {
       method: 'POST',
-      body: JSON.stringify({ topic }),
+      body: JSON.stringify({ topic })
     });
   },
 
-  // Feature 5: Daily Recovery Check-in Analysis
+  /**
+   * Analyzes multi-metric daily check-ins to output risk classification and focus areas.
+   */
   async analyzeCheckIn(data: {
     mood: number;
     stress: number;
@@ -110,14 +138,22 @@ export const apiService = {
     energy: number;
     cravings: number;
     journal_entry?: string;
-  }): Promise<NonNullable<CheckInLog['analysis']>> {
-    return fetchAPI<NonNullable<CheckInLog['analysis']>>('/api/ai/checkin-analysis', {
+  }): Promise<{
+    recovery_summary: string;
+    risk_level: 'Low' | 'Moderate' | 'High';
+    positive_highlights: string[];
+    personalized_recommendations: string[];
+    suggested_focus: string;
+  }> {
+    return fetchAPI('/api/ai/checkin-analysis', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     });
   },
 
-  // Feature 6: Real-time Safety Analyzer
+  /**
+   * Evaluates real-time risk indicators and recent text.
+   */
   async analyzeSafety(data: {
     cravings: number;
     stress: number;
@@ -127,19 +163,16 @@ export const apiService = {
   }): Promise<SafetyStatus> {
     return fetchAPI<SafetyStatus>('/api/ai/safety-analyze', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     });
   },
 
-  // Daily Motivation Quote
+  /**
+   * Fetches daily inspirational recovery quote and reflection prompt.
+   */
   async fetchDailyMotivation(): Promise<DailyMotivation> {
     return fetchAPI<DailyMotivation>('/api/ai/motivation', {
-      method: 'GET',
+      method: 'GET'
     });
-  },
-
-  // Healthcheck
-  async checkHealth(): Promise<{ status: string; gemini_api_configured: boolean }> {
-    return fetchAPI<{ status: string; gemini_api_configured: boolean }>('/api/health');
   }
 };

@@ -9,9 +9,12 @@ Exposes high-performance, asynchronous endpoints for the RecoveryAI platform:
 - /checkin-analysis: Multi-Metric Daily Recovery Analysis
 - /safety-analyze: Real-Time Safety & Risk Analyzer
 - /motivation: Daily Inspirational Quotes & Reflection Prompts
+
+All endpoints validate input via Pydantic schemas, apply input sanitization,
+and return structured JSON responses with proper HTTP status codes.
 """
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, status
 from typing import Optional
 from app.schemas import (
     CoachRequest, CoachResponse,
@@ -23,25 +26,38 @@ from app.schemas import (
     MotivationResponse
 )
 from app.services.gemini_service import gemini_service
+import logging
+
+logger = logging.getLogger("ai_router")
 
 router = APIRouter(prefix="/api/ai", tags=["AI Engine"])
 
 
-@router.post("/coach", response_model=CoachResponse, summary="Voice AI Recovery Coach")
+@router.post(
+    "/coach",
+    response_model=CoachResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Voice AI Recovery Coach",
+    description="Processes speech transcripts or text prompts to return structured empathetic recovery guidance."
+)
 async def voice_coach_endpoint(
     req: CoachRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Processes speech transcripts or user text prompts to return structured
-    empathetic guidance, grounding exercises, breathing steps, and next actions.
+    """Processes speech transcripts or user text prompts for structured empathetic guidance.
+
+    Generates grounding exercises, breathing steps, motivational advice,
+    and healthy distraction suggestions from user voice input.
 
     Args:
         req: CoachRequest payload containing user_input, conversation_history, user_context.
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        CoachResponse dict with structured AI outputs.
+        CoachResponse dict with structured AI coaching outputs.
+
+    Raises:
+        HTTPException: 422 on validation error (handled by FastAPI), 500 on AI failure.
     """
     try:
         res = await gemini_service.get_coach_response(
@@ -51,18 +67,29 @@ async def voice_coach_endpoint(
             custom_api_key=x_gemini_api_key
         )
         return res
+    except ValueError as e:
+        logger.warning(f"Coach validation error: {e}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Coach endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/emergency", response_model=EmergencyResponse, summary="SOS Emergency Script Generator")
+@router.post(
+    "/emergency",
+    response_model=EmergencyResponse,
+    status_code=status.HTTP_200_OK,
+    summary="SOS Emergency Script Generator",
+    description="Generates a personalized crisis intervention package with calming scripts, coping checklists, and hotlines."
+)
 async def emergency_endpoint(
     req: EmergencyRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Generates a personalized emergency cognitive reset script, coping checklist,
-    breathing instructions, ready-to-send SMS text, and panic intervention steps.
+    """Generates a personalized emergency cognitive reset script and crisis support package.
+
+    Produces a calming emergency message, coping checklist, breathing instructions,
+    ready-to-send SMS text for trusted contacts, panic intervention steps, and hotlines.
 
     Args:
         req: EmergencyRequest payload with trigger_reason, user_name, trusted_contact_name.
@@ -70,6 +97,9 @@ async def emergency_endpoint(
 
     Returns:
         EmergencyResponse payload with structured crisis support items.
+
+    Raises:
+        HTTPException: 500 on AI service failure.
     """
     try:
         res = await gemini_service.get_emergency_response(
@@ -80,24 +110,35 @@ async def emergency_endpoint(
         )
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Emergency endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/caregiver", response_model=CaregiverResponse, summary="Caregiver De-escalation Assistant")
+@router.post(
+    "/caregiver",
+    response_model=CaregiverResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Caregiver De-escalation Assistant",
+    description="Provides evidence-based de-escalation protocols and verbal boundary guides for family caregivers."
+)
 async def caregiver_endpoint(
     req: CaregiverRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Provides evidence-based answers, de-escalation protocols, verbal boundaries,
-    and warning sign guides for family members supporting loved ones in recovery.
+    """Provides evidence-based caregiver guidance, de-escalation scripts, and self-care tips.
+
+    Answers caregiver questions with compassionate, clinically-grounded protocols
+    including warning sign detection and verbal boundary guidance.
 
     Args:
         req: CaregiverRequest containing question and optional patient_context.
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        CaregiverResponse payload with structured guidance.
+        CaregiverResponse payload with structured caregiver guidance.
+
+    Raises:
+        HTTPException: 422 on validation error, 500 on AI failure.
     """
     try:
         res = await gemini_service.get_caregiver_response(
@@ -106,25 +147,39 @@ async def caregiver_endpoint(
             custom_api_key=x_gemini_api_key
         )
         return res
+    except ValueError as e:
+        logger.warning(f"Caregiver validation error: {e}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Caregiver endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/education", response_model=EducationResponse, summary="AI Education Hub Search")
+@router.post(
+    "/education",
+    response_model=EducationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="AI Education Hub Search",
+    description="Synthesizes comprehensive, evidence-based recovery articles on demand."
+)
 async def education_endpoint(
     req: EducationRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Synthesizes comprehensive, evidence-based recovery articles on topics like
-    withdrawal, relapse prevention, coping techniques, and therapy options.
+    """Synthesizes comprehensive, evidence-based recovery articles on recovery topics.
+
+    Generates structured educational content on withdrawal, relapse prevention,
+    coping techniques, and therapy options.
 
     Args:
         req: EducationRequest containing target topic.
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        EducationResponse structured article.
+        EducationResponse structured article with overview, takeaways, and strategies.
+
+    Raises:
+        HTTPException: 422 on validation error, 500 on AI failure.
     """
     try:
         res = await gemini_service.get_education_response(
@@ -132,25 +187,39 @@ async def education_endpoint(
             custom_api_key=x_gemini_api_key
         )
         return res
+    except ValueError as e:
+        logger.warning(f"Education validation error: {e}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Education endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/checkin-analysis", response_model=CheckInResponse, summary="Multi-Metric Daily Check-In Analysis")
+@router.post(
+    "/checkin-analysis",
+    response_model=CheckInResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Multi-Metric Daily Check-In Analysis",
+    description="Evaluates mood, stress, sleep, energy, and craving metrics to produce AI-powered risk analysis."
+)
 async def checkin_analysis_endpoint(
     req: CheckInRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Evaluates holistic check-in metrics (mood, stress, sleep, energy, cravings, journal)
-    to output risk level classification, positive highlights, and action steps.
+    """Evaluates holistic check-in metrics to output recovery risk classification.
+
+    Analyzes mood, stress, sleep, energy, cravings, and optional journal text
+    to produce risk tier, positive highlights, and personalized action steps.
 
     Args:
         req: CheckInRequest containing numeric metrics and optional journal entry.
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        CheckInResponse payload with risk level and recommendations.
+        CheckInResponse payload with risk level, summary, and recommendations.
+
+    Raises:
+        HTTPException: 422 on validation error, 500 on AI failure.
     """
     try:
         res = await gemini_service.get_checkin_analysis(
@@ -163,25 +232,39 @@ async def checkin_analysis_endpoint(
             custom_api_key=x_gemini_api_key
         )
         return res
+    except ValueError as e:
+        logger.warning(f"CheckIn validation error: {e}")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"CheckIn endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.post("/safety-analyze", response_model=SafetyAnalyzeResponse, summary="Real-Time Safety & Risk Analyzer")
+@router.post(
+    "/safety-analyze",
+    response_model=SafetyAnalyzeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Real-Time Safety & Risk Analyzer",
+    description="Analyzes acute risk metrics in real-time to determine safety level and generate immediate interventions."
+)
 async def safety_analyze_endpoint(
     req: SafetyAnalyzeRequest,
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Analyzes acute risk metrics and text indicators to determine immediate risk level
-    and generate immediate safety interventions and hydration reminders.
+    """Analyzes acute risk metrics and text indicators to determine immediate safety risk.
+
+    Evaluates craving intensity, stress, sleep quality, and isolation score
+    to generate a safety tier, trigger list, immediate actions, and grounding exercises.
 
     Args:
-        req: SafetyAnalyzeRequest containing cravings, stress, sleep, isolation.
+        req: SafetyAnalyzeRequest containing cravings, stress, sleep, isolation_score.
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        SafetyAnalyzeResponse payload with risk assessment.
+        SafetyAnalyzeResponse payload with risk assessment and interventions.
+
+    Raises:
+        HTTPException: 500 on AI service failure.
     """
     try:
         res = await gemini_service.get_safety_analysis(
@@ -194,25 +277,37 @@ async def safety_analyze_endpoint(
         )
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Safety analyze endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/motivation", response_model=MotivationResponse, summary="Daily Inspirational Quote & Focus")
+@router.get(
+    "/motivation",
+    response_model=MotivationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Daily Inspirational Quote & Focus",
+    description="Returns a daily AI-generated recovery quote, reflection prompt, and focus theme."
+)
 async def motivation_endpoint(
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-Api-Key")
 ):
-    """
-    Returns a daily inspirational recovery quote, author attribution, reflection
-    prompt, and daily focus theme.
+    """Returns a daily AI-generated recovery quote, reflection prompt, and focus area.
+
+    Synthesizes an inspirational recovery quote with author attribution,
+    a reflection prompt, and a daily focus theme for motivation.
 
     Args:
         x_gemini_api_key: Optional custom Gemini API Key passed via header.
 
     Returns:
-        MotivationResponse payload.
+        MotivationResponse payload with quote, author, reflection_prompt, daily_focus.
+
+    Raises:
+        HTTPException: 500 on AI service failure.
     """
     try:
         res = await gemini_service.get_daily_motivation(custom_api_key=x_gemini_api_key)
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Motivation endpoint error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

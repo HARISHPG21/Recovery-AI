@@ -572,3 +572,207 @@ class TestFullUserJourney:
             })
             assert cg_res.status_code == 200
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Schema Sanitization Tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSchemaSanitization:
+    """Tests for input sanitization validators across all request schemas."""
+
+    def test_coach_request_strips_control_chars(self):
+        """CoachRequest should strip null bytes and control characters from user_input."""
+        from app.schemas import CoachRequest
+        req = CoachRequest(user_input="Hello\x00 World\x01\x1f")
+        assert "\x00" not in req.user_input
+        assert "\x01" not in req.user_input
+        assert "Hello" in req.user_input
+
+    def test_coach_request_trims_long_input(self):
+        """CoachRequest should trim user_input to max 2000 characters."""
+        from app.schemas import CoachRequest
+        long_input = "a" * 5000
+        req = CoachRequest(user_input=long_input)
+        assert len(req.user_input) <= 2000
+
+    def test_caregiver_request_sanitizes_question(self):
+        """CaregiverRequest should sanitize control characters from question field."""
+        from app.schemas import CaregiverRequest
+        req = CaregiverRequest(question="How to help\x00\x01 someone?")
+        assert "\x00" not in req.question
+        assert "How to help" in req.question
+
+    def test_education_request_sanitizes_topic(self):
+        """EducationRequest should sanitize control characters from topic field."""
+        from app.schemas import EducationRequest
+        req = EducationRequest(topic="Withdrawal\x00 Symptoms\x1f")
+        assert "\x00" not in req.topic
+        assert "Withdrawal" in req.topic
+
+    def test_sanitize_input_text_empty_string(self):
+        """sanitize_input_text should return empty string for empty input."""
+        from app.schemas import sanitize_input_text
+        assert sanitize_input_text("") == ""
+
+    def test_sanitize_input_text_preserves_newlines(self):
+        """sanitize_input_text should preserve newline characters."""
+        from app.schemas import sanitize_input_text
+        result = sanitize_input_text("Line 1\nLine 2")
+        assert "Line 1" in result
+        assert "Line 2" in result
+
+    def test_checkin_request_rejects_invalid_mood(self):
+        """CheckInRequest must reject mood values outside 1-10 range."""
+        from app.schemas import CheckInRequest
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            CheckInRequest(mood=0, stress=5, sleep=5, energy=5, cravings=5)
+
+    def test_checkin_request_validates_cravings_zero(self):
+        """CheckInRequest should accept cravings value of 0."""
+        from app.schemas import CheckInRequest
+        req = CheckInRequest(mood=7, stress=3, sleep=8, energy=6, cravings=0)
+        assert req.cravings == 0
+
+    def test_safety_analyze_request_default_isolation(self):
+        """SafetyAnalyzeRequest should default isolation_score to 5."""
+        from app.schemas import SafetyAnalyzeRequest
+        req = SafetyAnalyzeRequest(cravings=3, stress=4, sleep=7)
+        assert req.isolation_score == 5
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GeminiService Internal Method Tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestGeminiServiceInternals:
+    """Tests for GeminiService internal cache and client helper methods."""
+
+    def test_cache_key_deterministic(self):
+        """Same prompt always produces the same cache key."""
+        from app.services.gemini_service import _cache_key
+        key1 = _cache_key("test prompt")
+        key2 = _cache_key("test prompt")
+        assert key1 == key2
+
+    def test_cache_key_different_prompts(self):
+        """Different prompts should produce different cache keys."""
+        from app.services.gemini_service import _cache_key
+        key1 = _cache_key("prompt A")
+        key2 = _cache_key("prompt B")
+        assert key1 != key2
+
+    def test_set_and_get_cache(self):
+        """Setting then getting a cache entry within TTL should return the stored data."""
+        import app.services.gemini_service as svc
+        svc._response_cache.clear()
+        test_key = "test_key_123"
+        test_data = {"answer": "cached"}
+        svc._set_cached(test_key, test_data)
+        result = svc._get_cached(test_key)
+        assert result == test_data
+
+    def test_expired_cache_returns_none(self):
+        """An expired cache entry should return None."""
+        import app.services.gemini_service as svc
+        import time
+        svc._response_cache.clear()
+        test_key = "expired_key"
+        svc._response_cache[test_key] = {"data": {"old": "data"}, "ts": time.time() - 400}
+        result = svc._get_cached(test_key)
+        assert result is None
+
+    def test_build_client_returns_none_without_key(self):
+        """_build_client with no custom key and no default key should return None."""
+        from app.services.gemini_service import GeminiService
+        svc_inst = object.__new__(GeminiService)
+        svc_inst.api_key = ""
+        svc_inst.client = None
+        result = svc_inst._build_client(custom_api_key=None)
+        assert result is None
+
+    def test_clean_json_strips_markdown_fences(self):
+        """_clean_json_response should strip triple-backtick json fences."""
+        from app.services.gemini_service import GeminiService
+        svc_inst = object.__new__(GeminiService)
+        raw = '```json\n{"key": "value"}\n```'
+        cleaned = svc_inst._clean_json_response(raw)
+        assert cleaned == '{"key": "value"}'
+
+    def test_clean_json_strips_plain_fences(self):
+        """_clean_json_response should strip plain triple-backtick fences."""
+        from app.services.gemini_service import GeminiService
+        svc_inst = object.__new__(GeminiService)
+        raw = '```\n{"key": "value"}\n```'
+        cleaned = svc_inst._clean_json_response(raw)
+        assert cleaned == '{"key": "value"}'
+
+    def test_clean_json_passthrough_plain_json(self):
+        """_clean_json_response should return plain JSON unchanged."""
+        from app.services.gemini_service import GeminiService
+        svc_inst = object.__new__(GeminiService)
+        raw = '{"key": "value"}'
+        cleaned = svc_inst._clean_json_response(raw)
+        assert cleaned == '{"key": "value"}'
+
+    @pytest.mark.anyio
+    async def test_generate_response_uses_fallback_without_client(self):
+        """generate_response should return fallback data when no client is initialized."""
+        from app.services.gemini_service import GeminiService
+        svc_inst = object.__new__(GeminiService)
+        svc_inst.api_key = ""
+        svc_inst.client = None
+        fallback = {"result": "fallback"}
+        result = await svc_inst.generate_response("test prompt", fallback)
+        assert result == fallback
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Motivation Endpoint Tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+MOCK_MOTIVATION_RESPONSE = {
+    "quote": "Recovery is a journey of a thousand steps.",
+    "author": "RecoveryAI",
+    "reflection_prompt": "What is one strength you have shown this week?",
+    "daily_focus": "Gratitude & Presence"
+}
+
+
+class TestMotivationEndpoint:
+    """Tests for the /api/ai/motivation endpoint."""
+
+    @pytest.mark.anyio
+    async def test_motivation_returns_200(self, client):
+        """Motivation endpoint should return HTTP 200."""
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_MOTIVATION_RESPONSE):
+            response = await client.get("/api/ai/motivation")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_motivation_response_schema(self, client):
+        """Motivation response must include all 4 required fields."""
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_MOTIVATION_RESPONSE):
+            response = await client.get("/api/ai/motivation")
+        data = response.json()
+        assert "quote" in data
+        assert "author" in data
+        assert "reflection_prompt" in data
+        assert "daily_focus" in data
+
+    @pytest.mark.anyio
+    async def test_motivation_quote_is_nonempty(self, client):
+        """Motivation quote field should be a non-empty string."""
+        with patch("app.services.gemini_service.gemini_service.generate_response",
+                   new_callable=AsyncMock, return_value=MOCK_MOTIVATION_RESPONSE):
+            response = await client.get("/api/ai/motivation")
+        data = response.json()
+        assert len(data["quote"]) > 0
+
+    @pytest.mark.anyio
+    async def test_motivation_rejects_post(self, client):
+        """Motivation endpoint should reject POST requests with 405."""
+        response = await client.post("/api/ai/motivation", json={})
+        assert response.status_code == 405

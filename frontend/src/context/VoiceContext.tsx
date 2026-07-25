@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-interface VoiceContextType {
+/**
+ * Speech Recognition and Synthesis Context contract.
+ */
+export interface VoiceContextType {
   isListening: boolean;
   transcript: string;
   isSpeaking: boolean;
@@ -21,6 +24,14 @@ interface VoiceContextType {
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
 
+/**
+ * VoiceProvider Component
+ * 
+ * Manages hands-free speech recognition (Web SpeechRecognition API)
+ * and text-to-speech synthesis (Web SpeechSynthesis API) with custom voice pitch and rate controls.
+ * 
+ * @component
+ */
 export const VoiceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');

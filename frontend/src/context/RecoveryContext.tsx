@@ -2,13 +2,19 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { CheckInLog, EmergencyContact, UserPreferences, DailyMotivation } from '../types';
 import { apiService } from '../services/api';
 
-interface Toast {
+/**
+ * Toast notification payload contract.
+ */
+export interface Toast {
   id: string;
   type: 'info' | 'success' | 'warning' | 'error';
   message: string;
 }
 
-interface RecoveryContextType {
+/**
+ * Global Recovery Context contract defining state and actions.
+ */
+export interface RecoveryContextType {
   checkIns: CheckInLog[];
   streakDays: number;
   emergencyContacts: EmergencyContact[];

@@ -1,10 +1,21 @@
+"""
+Gemini AI Service Module
+
+Core AI engine for RecoveryAI, interfacing with Google Gemini 2.5 Flash
+via the google-genai SDK. Provides structured JSON responses for all recovery
+interventions with:
+- In-memory TTL-based response caching (5-min, 100-entry LRU eviction)
+- Dynamic intelligent fallback responses when API is unavailable
+- Input sanitization and safe JSON parsing
+- Per-request custom API key support
+"""
+
 import json
 import logging
 import re
 import hashlib
 import time
-from functools import lru_cache
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.config import settings
 from app.prompts import (
     SYSTEM_BASE_PROMPT,
@@ -18,18 +29,32 @@ from app.prompts import (
 
 logger = logging.getLogger("gemini_service")
 
-# ── In-memory response cache (TTL: 5 minutes) ─────────────────────────────────
+# ── In-memory response cache (TTL: 5 minutes, max 100 entries) ────────────────
 _response_cache: Dict[str, Dict[str, Any]] = {}
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 def _cache_key(prompt: str) -> str:
-    """Generates a stable MD5 cache key from the prompt string."""
+    """Generates a stable MD5 cache key from the prompt string.
+
+    Args:
+        prompt: The full prompt string to hash.
+
+    Returns:
+        A 32-character hex string MD5 digest.
+    """
     return hashlib.md5(prompt.encode("utf-8")).hexdigest()
 
 
 def _get_cached(key: str) -> Optional[Dict[str, Any]]:
-    """Returns cached response if still valid within TTL, else None."""
+    """Returns cached response if still valid within TTL, else None.
+
+    Args:
+        key: The MD5 cache key to look up.
+
+    Returns:
+        Cached dict if found and not expired, otherwise None.
+    """
     entry = _response_cache.get(key)
     if entry and (time.time() - entry["ts"]) < _CACHE_TTL_SECONDS:
         logger.info(f"Cache HIT for key {key[:8]}...")
@@ -38,7 +63,14 @@ def _get_cached(key: str) -> Optional[Dict[str, Any]]:
 
 
 def _set_cached(key: str, data: Dict[str, Any]) -> None:
-    """Stores a response in the in-memory cache with a timestamp."""
+    """Stores a response in the in-memory cache with a timestamp.
+
+    Evicts the oldest entry when the cache exceeds 100 entries.
+
+    Args:
+        key: The MD5 cache key to store under.
+        data: The response dict to cache.
+    """
     _response_cache[key] = {"data": data, "ts": time.time()}
     # Evict old entries if cache grows too large (max 100 entries)
     if len(_response_cache) > 100:
@@ -47,7 +79,15 @@ def _set_cached(key: str, data: Dict[str, Any]) -> None:
 
 
 class GeminiService:
-    def __init__(self):
+    """Core AI service that interfaces with the Google Gemini API.
+
+    Handles client initialization, prompt execution, JSON extraction,
+    response caching, and intelligent fallback generation for all
+    RecoveryAI intervention types.
+    """
+
+    def __init__(self) -> None:
+        """Initializes GeminiService by configuring the Gemini client from settings."""
         self.api_key = settings.GEMINI_API_KEY
         self.client = None
         if self.api_key:
@@ -66,7 +106,14 @@ class GeminiService:
                     logger.warning(f"Failed to initialize Gemini SDK: {e}")
 
     def _clean_json_response(self, text: str) -> str:
-        """Extracts JSON content from markdown codeblocks if needed."""
+        """Extracts JSON content from markdown code blocks if present.
+
+        Args:
+            text: Raw text response from Gemini.
+
+        Returns:
+            Cleaned JSON string with markdown fences removed.
+        """
         text = text.strip()
         if "```json" in text:
             match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
@@ -78,9 +125,35 @@ class GeminiService:
                 return match.group(1).strip()
         return text
 
-    async def generate_response(self, prompt: str, fallback_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_client(self, custom_api_key: Optional[str] = None):
+        """Returns a Gemini client, optionally using a per-request custom API key.
+
+        Args:
+            custom_api_key: Optional API key to override the default configured key.
+
+        Returns:
+            Initialized Gemini client, or None if no key is available.
         """
-        Calls Gemini API with the given prompt, returning parsed JSON or intelligent fallback.
+        if custom_api_key:
+            try:
+                from google import genai
+                return genai.Client(api_key=custom_api_key)
+            except ImportError:
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=custom_api_key)
+                    return genai.GenerativeModel(settings.GEMINI_MODEL)
+                except Exception as e:
+                    logger.warning(f"Custom key client init failed: {e}")
+        return self.client
+
+    async def generate_response(
+        self,
+        prompt: str,
+        fallback_data: Dict[str, Any],
+        custom_api_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Calls Gemini API with the given prompt, returning parsed JSON or intelligent fallback.
 
         Uses an in-memory LRU-style cache with a 5-minute TTL to avoid redundant
         API calls for identical prompts, significantly improving response efficiency.
@@ -88,11 +161,14 @@ class GeminiService:
         Args:
             prompt: The full prompt string to send to Gemini.
             fallback_data: Structured fallback data returned if API is unavailable.
+            custom_api_key: Optional per-request Gemini API key override.
 
         Returns:
             Parsed JSON dict from Gemini, cached result, or fallback data.
         """
-        if not self.client or not self.api_key:
+        client = self._build_client(custom_api_key)
+
+        if not client or not (custom_api_key or self.api_key):
             logger.info("Using intelligent dynamic fallback engine (No API Key set).")
             return fallback_data
 
@@ -105,16 +181,16 @@ class GeminiService:
         try:
             raw_text = ""
             # Check SDK flavor
-            if hasattr(self.client, 'models'):
+            if hasattr(client, 'models'):
                 # google.genai Client
-                response = self.client.models.generate_content(
+                response = client.models.generate_content(
                     model=settings.GEMINI_MODEL,
                     contents=prompt
                 )
                 raw_text = response.text
-            elif hasattr(self.client, 'generate_content'):
+            elif hasattr(client, 'generate_content'):
                 # google.generativeai Model
-                response = self.client.generate_content(prompt)
+                response = client.generate_content(prompt)
                 raw_text = response.text
 
             cleaned = self._clean_json_response(raw_text)
@@ -129,21 +205,22 @@ class GeminiService:
     async def get_coach_response(
         self,
         user_input: str,
-        history: Optional[list] = None,
-        context: Optional[dict] = None,
+        history: Optional[List[Dict[str, str]]] = None,
+        context: Optional[Dict[str, Any]] = None,
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Generates empathetic Voice Coach intervention from user transcript.
+        """Generates empathetic Voice Coach intervention from user speech transcript.
 
         Args:
-            user_input: Speech transcript string.
-            history: Previous turn history list.
-            context: User state metrics dict.
-            custom_api_key: Optional client-provided Gemini API Key.
+            user_input: Speech transcript or text message from the user.
+            history: Previous conversation turn history list.
+            context: Optional user state metrics dict (mood, craving, etc).
+            custom_api_key: Optional per-request Gemini API key override.
 
         Returns:
-            Dict matching CoachResponse schema.
+            Dict matching CoachResponse schema with empathetic_response,
+            grounding_exercise, breathing_exercise, next_action,
+            motivational_advice, and healthy_distraction.
         """
         prompt = COACH_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
@@ -170,6 +247,23 @@ class GeminiService:
         trusted_contact: str = "Trusted Support",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """Generates a personalized SOS emergency intervention package.
+
+        Produces a calming emergency message, coping checklist, breathing
+        instructions, ready-to-send SMS text, panic intervention steps,
+        and direct hotline references.
+
+        Args:
+            trigger_reason: The reason or context for triggering emergency mode.
+            user_name: User's preferred name or anonymous tag.
+            trusted_contact: Name of the trusted contact person.
+            custom_api_key: Optional per-request Gemini API key override.
+
+        Returns:
+            Dict matching EmergencyResponse schema with emergency_message,
+            coping_checklist, breathing_instructions, trusted_person_message,
+            panic_intervention, and hotlines.
+        """
         prompt = EMERGENCY_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             trigger_reason=trigger_reason,
@@ -202,11 +296,25 @@ class GeminiService:
         return res
 
     async def get_caregiver_response(
-        self, 
-        question: str, 
+        self,
+        question: str,
         patient_context: str = "",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """Generates evidence-based caregiver guidance and de-escalation protocols.
+
+        Provides compassionate answers, verbal de-escalation scripts, warning
+        sign detection, boundary-setting steps, and caregiver self-care reminders.
+
+        Args:
+            question: The caregiver's question or scenario description.
+            patient_context: Optional context about the individual in recovery.
+            custom_api_key: Optional per-request Gemini API key override.
+
+        Returns:
+            Dict matching CaregiverResponse schema with answer, how_to_respond,
+            what_to_avoid, warning_signs, deescalation_steps, and self_care_tip.
+        """
         prompt = CAREGIVER_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             question=question,
@@ -233,10 +341,24 @@ class GeminiService:
         return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_education_response(
-        self, 
+        self,
         topic: str,
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
+        """Synthesizes a comprehensive, evidence-based recovery education article.
+
+        Generates structured content on recovery topics including withdrawal,
+        relapse prevention, coping strategies, and therapy options.
+
+        Args:
+            topic: Recovery topic or query string (e.g., 'withdrawal symptoms').
+            custom_api_key: Optional per-request Gemini API key override.
+
+        Returns:
+            Dict matching EducationResponse schema with topic, overview,
+            key_takeaways, actionable_strategies, when_to_seek_help,
+            and related_topics.
+        """
         prompt = EDUCATION_PROMPT_TEMPLATE.format(
             system_prompt=SYSTEM_BASE_PROMPT,
             topic=topic
@@ -276,21 +398,24 @@ class GeminiService:
         journal_entry: str = "",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Evaluates holistic check-in metrics (mood, stress, sleep, energy, cravings, journal text)
-        to output structured recovery summary, risk classification, positive highlights, and recommendations.
+        """Evaluates holistic check-in metrics to produce a structured recovery analysis.
+
+        Computes a baseline risk tier from numeric metrics before generating
+        an AI-enriched summary, risk classification, positive highlights,
+        and personalized daily recommendations.
 
         Args:
-            mood: 1-10 rating.
-            stress: 1-10 rating.
-            sleep: 1-10 rating.
-            energy: 1-10 rating.
-            cravings: 0-10 rating.
-            journal_entry: Optional reflection text.
-            custom_api_key: Optional client-provided API Key.
+            mood: 1-10 mood rating (higher is better).
+            stress: 1-10 stress rating (higher is worse).
+            sleep: 1-10 sleep quality rating (higher is better).
+            energy: 1-10 energy level rating (higher is better).
+            cravings: 0-10 craving intensity rating (higher is worse).
+            journal_entry: Optional free-text reflection entry.
+            custom_api_key: Optional per-request Gemini API key override.
 
         Returns:
-            Dict matching CheckInResponse schema.
+            Dict matching CheckInResponse schema with recovery_summary, risk_level,
+            positive_highlights, personalized_recommendations, and suggested_focus.
         """
         # Determine risk tier baseline
         calculated_risk = "Low"
@@ -336,19 +461,24 @@ class GeminiService:
         recent_text: str = "",
         custom_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Analyzes acute risk indicators and text input to evaluate real-time safety risk levels.
+        """Analyzes acute risk indicators and text input to evaluate real-time safety risk.
+
+        Computes a baseline risk level from metrics, then generates an AI-enriched
+        safety assessment with triggers, immediate actions, grounding prompts,
+        and contact recommendations.
 
         Args:
-            cravings: 0-10 rating.
-            stress: 1-10 rating.
-            sleep: 1-10 rating.
-            isolation_score: 1-10 rating.
-            recent_text: Optional recent journal text.
-            custom_api_key: Optional client-provided API Key.
+            cravings: 0-10 craving intensity rating.
+            stress: 1-10 stress level rating.
+            sleep: 1-10 sleep quality rating.
+            isolation_score: 1-10 social isolation rating (higher is more isolated).
+            recent_text: Optional recent journal or text note.
+            custom_api_key: Optional per-request Gemini API key override.
 
         Returns:
-            Dict matching SafetyAnalyzeResponse schema.
+            Dict matching SafetyAnalyzeResponse schema with risk_level,
+            triggers_detected, immediate_actions, grounding_prompt,
+            hydration_reminder, and contact_recommendation.
         """
         # Calculate risk
         risk_level = "Low"
@@ -386,17 +516,17 @@ class GeminiService:
         return await self.generate_response(prompt, fallback, custom_api_key)
 
     async def get_daily_motivation(self, custom_api_key: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Synthesizes daily inspirational recovery quote, reflection prompt, and focus area.
+        """Synthesizes a daily inspirational recovery quote, reflection prompt, and focus area.
 
         Args:
-            custom_api_key: Optional client-provided API Key.
+            custom_api_key: Optional per-request Gemini API key override.
 
         Returns:
-            Dict matching MotivationResponse schema.
+            Dict matching MotivationResponse schema with quote, author,
+            reflection_prompt, and daily_focus.
         """
         prompt = f"{SYSTEM_BASE_PROMPT}\n\nGenerate an inspiring daily recovery motivation quote, author, reflection prompt, and focus area in valid JSON with keys: quote, author, reflection_prompt, daily_focus."
-        
+
         fallback = {
             "quote": "Recovery is not a race; it is a quiet, powerful commitment to honor yourself one breath at a time.",
             "author": "RecoveryAI Companion",
@@ -405,5 +535,6 @@ class GeminiService:
         }
 
         return await self.generate_response(prompt, fallback, custom_api_key)
+
 
 gemini_service = GeminiService()
